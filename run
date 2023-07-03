@@ -1,0 +1,58 @@
+#!/usr/bin/env node
+
+const main = async function() {
+    try {
+
+        const fix_path_tmp = await import("fix-path");
+        const fix_path = fix_path_tmp.default;
+        const fs = require("fs");
+        const path = require("path");
+        const child_process = require("child_process");
+        const argumento = process.argv[2];
+        const carpeta_de_programas = path.resolve(__dirname, "src");
+        const programas = fs.readdirSync(carpeta_de_programas);
+        
+        let carpeta_de_programa = undefined;
+        let ruta_a_carpeta_de_programa = undefined;
+        let nombre_de_programa = undefined;
+
+        for(let index = 0; index < programas.length; index++) {
+            const carpeta_de_programa_temporal = programas[index];
+            const ruta_a_carpeta_de_programa_temporal = path.resolve(carpeta_de_programas, carpeta_de_programa_temporal);
+            const nombre_de_programa_temporal = carpeta_de_programa_temporal.replace(/^[0-9]+\./g, "");
+            if(argumento === nombre_de_programa_temporal) {
+                carpeta_de_programa = carpeta_de_programa_temporal;
+                ruta_a_carpeta_de_programa = ruta_a_carpeta_de_programa_temporal;
+                nombre_de_programa = nombre_de_programa_temporal;
+            }
+        }
+
+        if(typeof carpeta_de_programa === "undefined") {
+            throw new Error(`El programa «${argumento}» no fue encontrado`);
+        }
+
+        const fichero_asm = nombre_de_programa + ".asm";
+        const fichero_obj = nombre_de_programa + ".o";
+        const fichero_bin = nombre_de_programa;
+        const comando_1 = `nasm -f elf64 -o ${fichero_obj} ${fichero_asm}`;
+        const comando_2 = `ld ${fichero_obj} -o ${fichero_bin}`;
+        const comando_3 = path.resolve(ruta_a_carpeta_de_programa, fichero_bin);
+        const stdio = [process.stdin, process.stdout, process.stderr];
+        console.log(`[*] Ejecutando (1/3): ${comando_1}`);
+        child_process.execSync(comando_1, { cwd: ruta_a_carpeta_de_programa, stdio });
+        console.log(`[*] Ejecutando (2/3): ${comando_2}`);
+        child_process.execSync(comando_2, { cwd: ruta_a_carpeta_de_programa, stdio });
+        fix_path();
+        console.log(`[*] Ejecutando (3/3): ${comando_3}`);
+        console.log(`=====================`);
+        const momento_de_inicio = new Date();
+        child_process.execSync(comando_3, { stdio });
+        const tiempo_de_ejecucion = (new Date()) - momento_de_inicio;
+        console.log(`=====================`);
+        console.log("[*] La ejecución tomó: " + tiempo_de_ejecucion + " milisegundos");
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+main();
