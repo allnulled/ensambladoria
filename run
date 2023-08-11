@@ -1,7 +1,18 @@
 #!/usr/bin/env node
 
+const _console = console;
 const main = async function() {
     try {
+        const opts = {
+            debug: process.argv.indexOf("--debug") !== -1
+        };
+        const console = {
+            log: function (...args) {
+                if(opts.debug) {
+                    _console.log(...args);
+                }
+            }
+        };
 
         const fix_path_tmp = await import("fix-path");
         const fix_path = fix_path_tmp.default;
@@ -34,16 +45,22 @@ const main = async function() {
         const fichero_asm = nombre_de_programa + ".asm";
         const fichero_obj = nombre_de_programa + ".o";
         const fichero_bin = nombre_de_programa;
+        const fichero_makefile = path.resolve(ruta_a_carpeta_de_programa, "Makefile");
         const comando_1 = `nasm -f elf64 -o ${fichero_obj} ${fichero_asm}`;
         const comando_2 = `ld ${fichero_obj} -o ${fichero_bin}`;
+        const comando_makefile = path.resolve(ruta_a_carpeta_de_programa, "Makefile");
         const comando_3 = path.resolve(ruta_a_carpeta_de_programa, fichero_bin);
         const stdio = [process.stdin, process.stdout, process.stderr];
-        console.log(`[*] Ejecutando (1/3): ${comando_1}`);
+        console.log(`[*] Ejecutando (1/3): compilando fichero *.asm...\n  ~$ ${comando_1}`);
+        
         child_process.execSync(comando_1, { cwd: ruta_a_carpeta_de_programa, stdio });
-        console.log(`[*] Ejecutando (2/3): ${comando_2}`);
+        if (fs.existsSync(comando_makefile)) {
+            console.log(`[*] Ejecutando (1/3 con makefile): compilando mediante fichero «Makefile»\n  ~$ ${comando_makefile}`);
+        }
+        console.log(`[*] Ejecutando (2/3): compilando fichero *.o...\n  ~$ ${comando_2}`);
         child_process.execSync(comando_2, { cwd: ruta_a_carpeta_de_programa, stdio });
         fix_path();
-        console.log(`[*] Ejecutando (3/3): ${comando_3}`);
+        console.log(`[*] Ejecutando (3/3): ejecutando fichero compilado...\n  ~$ ${comando_3}`);
         console.log(`=====================`);
         const momento_de_inicio = new Date();
         child_process.execSync(comando_3, { stdio });
